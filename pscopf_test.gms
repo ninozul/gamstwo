@@ -134,6 +134,18 @@ $if not set voltage_tolerance $set voltage_tolerance 1e-6
 * solution
 $if not set solutionname $set solutionname solution
 
+* for testing:
+$if not set do_infeas $set do_infeas 0
+$if not set do_bad_output $set do_bad_output 0
+$if not set do_compile_error $set do_compile_error 0
+$if not set do_exec_error $set do_exec_error 0
+$ifthen %do_compile_error%==1
+$abort 'added a compile error'
+$endif
+$ifthen %do_exec_error%==1
+abort 'added an execution error';
+$endif
+
 set baseCase /baseCase/;
 
 sets
@@ -426,6 +438,23 @@ iSeriesSusceptance(i)$iSeriesImpedanceNonzero(i)
   = -iSeriesReactance(i)
   / (sqr(iSeriesResistance(i)) + sqr(iSeriesReactance(i)));
 
+* for testing
+* make some mistakes
+*$ontext
+$ifthen %do_infeas%==1
+parameter infeasibilityScale / 0.01 /;
+jRealPowerDemand(j) = (1 + infeasibilityScale * normal(0,1)) * jRealPowerDemand(j);
+jReactivePowerDemand(j) = (1 + infeasibilityScale * normal(0,1)) * jReactivePowerDemand(j);
+jVoltageMagnitudeMin(j) = (1 - infeasibilityScale * sqr(normal(0,1))) * jVoltageMagnitudeMin(j);
+jVoltageMagnitudeMax(j) = (1 + infeasibilityScale * sqr(normal(0,1))) * jVoltageMagnitudeMax(j);
+lRealPowerMin(l) = (1 - infeasibilityScale * sqr(normal(0,1))) * lRealPowerMin(l);
+lRealPowerMax(l) = (1 + infeasibilityScale * sqr(normal(0,1))) * lRealPowerMax(l);
+lReactivePowerMin(l) = (1 - infeasibilityScale * sqr(normal(0,1))) * lReactivePowerMin(l);
+lReactivePowerMax(l) = (1 + infeasibilityScale * sqr(normal(0,1))) * lReactivePowerMax(l);
+iPowerMagnitudeMax(i) = (1 + infeasibilityScale * sqr(normal(0,1))) * iPowerMagnitudeMax(i);
+*$offtext
+$endif
+
 * bounds
 lkRealPower.lo(l,k)$lkActive(l,k) = lRealPowerMin(l);
 lkReactivePower.lo(l,k)$lkActive(l,k) = lReactivePowerMin(l);
@@ -579,8 +608,8 @@ jkVoltageMagnitudeMaintenanceViolationDef.scale(j,k)$(not kBase(k) and sum(l$(lk
 * solver options
 pscopf.optfile=1;
 $onecho > knitro.opt
-*feastol 1e-10
-*opttol 1e-10
+feastol 1e-10
+opttol 1e-10
 $offecho
 
 * solve penalty formulation
